@@ -20,7 +20,11 @@ OUTPUT_PATH = "/output/entry.txt"
 
 
 def validate(text: str) -> str:
-    """Return the entry line, enforcing the gate: 1-200 chars, one line."""
+    """Return the entry line, enforcing the gate: 1-200 chars, one line.
+
+    Also rejects control characters, which the gate's UTF-8 text rule
+    would treat as a broken entry.
+    """
     line = text.strip()
     if not line:
         raise ValueError("entry must not be blank")
@@ -28,14 +32,20 @@ def validate(text: str) -> str:
         raise ValueError(f"entry is {len(line)} chars, over the {MAX_CHARS} limit")
     if "\n" in line or "\r" in line:
         raise ValueError("entry must be a single line")
+    if any(ord(ch) < 0x20 and ch not in ("\t",) for ch in line):
+        raise ValueError("entry must not contain control characters")
     return line
 
 
-def main() -> None:
-    text = validate(LINE)
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as fh:
+def write_entry(text: str, path: str) -> None:
+    """Write the validated line to path, creating its directory first."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
         fh.write(text + "\n")
+
+
+def main() -> None:
+    write_entry(validate(LINE), OUTPUT_PATH)
 
 
 if __name__ == "__main__":
